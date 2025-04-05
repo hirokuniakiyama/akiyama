@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>麻雀オーラス優勝条件計算ツール</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    table { border-collapse: collapse; margin-bottom: 1em; }
+    th, td { border: 1px solid #ccc; padding: 5px; text-align: center; }
+    input, select { width: 80px; }
+    .error { color: red; }
+    .warning { color: orange; }
+  </style>
+</head>
+<body>
+  <h1>麻雀オーラス優勝条件計算ツール</h1>
+  <p>各プレイヤーのトータルポイント (pt) と持ち点 (点) を入力してください。<br>
+     持ち点は100点刻みで変動します。また、親を1人だけチェックしてください。</p>
+  <table>
+    <tr>
+      <th>プレイヤー</th>
+      <th>トータルpt</th>
+      <th>持ち点</th>
+      <th>親？</th>
+    </tr>
+    <tr>
+      <td>A</td>
+      <td><input type="number" id="totalA" value="-25.5" step="0.1"></td>
+      <td><input type="number" id="holdA" value="25800" step="100"></td>
+      <td><input type="checkbox" id="parentA"></td>
+    </tr>
+    <tr>
+      <td>B</td>
+      <td><input type="number" id="totalB" value="-47.5" step="0.1"></td>
+      <td><input type="number" id="holdB" value="27500" step="100"></td>
+      <td><input type="checkbox" id="parentB"></td>
+    </tr>
+    <tr>
+      <td>C</td>
+      <td><input type="number" id="totalC" value="17.6" step="0.1"></td>
+      <td><input type="number" id="holdC" value="25700" step="100"></td>
+      <td><input type="checkbox" id="parentC"></td>
+    </tr>
+    <tr>
+      <td>D</td>
+      <td><input type="number" id="totalD" value="55.4" step="0.1"></td>
+      <td><input type="number" id="holdD" value="21000" step="100"></td>
+      <td><input type="checkbox" id="parentD"></td>
+    </tr>
+  </table>
+
+  <p>本場数: <input type="number" id="honba" value="0" min="0" step="1"> 本場</p>
+  <p>供託（リーチ棒）本数: <input type="number" id="riichiSticks" value="0" min="0" step="1"> 本（1本=1000点）</p>
+
+  <p>※ 親は必ず1人だけチェックしてください。</p>
+
+  <h2>結果表示</h2>
+  <p>以下の表は、各プレイヤー（和了者）について、各相手からロン和了りとツモ和了りの場合の「優勝するために必要な最小和了点数」を求めたものです。<br>
+     ロンの場合は、セルにその相手から和了る必要点数 (例：「900点」) を表示します。<br>
+     ツモの場合、和了者が子の場合は「X / (親：Y)」の形式、親の場合は「Xオール」と表示します。</p>
+  <div id="resultArea"></div>
+
+  <button onclick="doCalculate()">計算する</button>
+  <button onclick="doReset()">リセット</button>
+
+<script>
+  // Mリーグの固定順位点（通常は [1位:+50, 2位:+10, 3位:-10, 4位:-30]）
+  const RANK_POINTS = [50, 10, -10, -30];
+
+  // 各種和了り点数リスト（例）
+  const PARENT_RON_POINTS = [
+    1500, 2000, 2400, 2900, 3400, 3900, 4400, 4800, 5300, 5800, 6800, 7700, 8700,
+    9600, 10600, 11600, 12000, 18000, 24000, 36000, 48000, 96000, 144000
+  ];
+  const PARENT_TSUMO_POINTS = [
+    500, 700, 800, 1000, 1200, 1300, 1500, 1600, 1800, 2000, 2300, 2600, 2900,
+    3200, 3600, 3900, 4000, 6000, 8000, 12000, 16000, 32000, 48000
+  ];
+  const CHILD_RON_POINTS = [
+    1000, 1300, 1600, 2000, 2300, 2600, 2900, 3200, 3600, 3900, 4500, 5200, 5800,
+    6400, 7100, 7700, 8000, 12000, 16000, 24000, 32000, 64000, 96000
+  ];
+  const CHILD_TSUMO_POINTS = [
+    [300, 500], [400, 700], [400, 800], [500, 1000], [600, 1200], [700, 1300],
+    [800, 1500], [800, 1600], [900, 1800], [1000, 2000], [1200, 2300], [1300, 2600],
+    [1500, 2900], [1600, 3200], [1800, 3600], [2000, 3900], [2000, 4000],
+    [3000, 6000], [4000, 8000], [6000, 12000], [8000, 16000], [16000, 32000],
+    [24000, 48000]
+  ];
+
+  /**
+   * calcFinalTotals:
+   * 各プレイヤーの最終トータルを計算する。
+   * 最終トータル = (持ち点 - 30000)/1000 + 順位点（同率の場合は平均順位点） + トータルpt
+   */
+  function calcFinalTotals(modHoldings, totals) {
+    // 各プレイヤーオブジェクトを作成
+    let players = ["A", "B", "C", "D"].map(p => {
+      return { name: p, hold: modHoldings[p], totalBefore: totals[p] };
+    });
+    // 持ち点で降順にソート
+    players.sort((a, b) => b.hold - a.hold);
+
+    // 同じ持ち点のグループごとに順位点を平均して割り当てる
+    let currentRank = 1;
+    for (let i = 0; i < players.length;) {
+      let group = [players[i]];
+      let j = i + 1;
+      // 同点グループを作成
+      while (j < players.length && players[j].hold === players[i].hold) {
+        group.push(players[j]);
+        j++;
+      }
+      let groupSize = group.length;
+      // 固定順位点リストから、現在の順位から groupSize 分の値の合計を算出
+      let sumRankPoints = 0;
+      for (let k = 0; k < groupSize; k++) {
+        sumRankPoints += RANK_POINTS[currentRank - 1 + k];
+      }
+      let avgRankPoint = sumRankPoints / groupSize;
+      // 各グループメンバーに平均順位点を割り当て、最終トータルを計算
+      group.forEach(player => {
+        player.diff = (player.hold - 30000) / 1000;
+        player.rank = currentRank; // 同率なので、順位は同じ（参考用）
+        player.rankPoint = avgRankPoint;
+        player.final = player.totalBefore + player.diff + player.rankPoint;
+      });
+      currentRank += groupSize;
+      i = j;
+    }
+    return players;
+  }
+
+  /**
+   * getMinPointsToWin:
+   * 指定シナリオにおいて、和了者が優勝するための最小必要和了点数を返す。
+   * @param {Object} totals {A, B, C, D} オーラス前トータルpt
+   * @param {Object} holds {A, B, C, D} 持ち点
+   * @param {String} winner 和了者 ("A","B","C","D")
+   * @param {String} method "ron" or "tsumo"
+   * @param {String} target (method==="ron"の場合の放銃者、tsumoの場合は空文字)
+   * @param {Object} parentFlags {A, B, C, D}
+   * @param {number} honba 本場数
+   * @param {number} riichiSticks 供託本数
+   * @returns {number|string} 最小必要和了点数（"オールOK", "優勝不可", または点数 or "X / Y"）
+   */
+  function getMinPointsToWin(totals, holds, winner, method, target, parentFlags, honba, riichiSticks) {
+    let pointsList;
+    if (method === "ron") {
+      pointsList = parentFlags[winner] ? PARENT_RON_POINTS : CHILD_RON_POINTS;
+    } else if (method === "tsumo") {
+      if (parentFlags[winner]) {
+        pointsList = PARENT_TSUMO_POINTS;
+      } else {
+        pointsList = CHILD_TSUMO_POINTS;
+      }
+    }
+    if (method === "tsumo") {
+      if (parentFlags[winner]) {
+        pointsList = [0, ...pointsList];
+      }
+    } else {
+      pointsList = [0, ...pointsList];
+    }
+
+    for (let point of pointsList) {
+      let X, Y;
+      if (method === "tsumo" && !parentFlags[winner]) {
+        X = point[0];
+        Y = point[1];
+      } else {
+        X = point;
+      }
+      let newHolds = Object.assign({}, holds);
+      if (method === "ron") {
+        let ronPoints = X + honba * 300;
+        newHolds[winner] += ronPoints;
+        newHolds[target] -= ronPoints;
+      } else if (method === "tsumo") {
+        if (parentFlags[winner]) {
+          let tsumoPoints = X + honba * 100;
+          newHolds[winner] += tsumoPoints * 3;
+          ["A", "B", "C", "D"].forEach(p => {
+            if (p !== winner) newHolds[p] -= tsumoPoints;
+          });
+        } else {
+          let childPay = X + honba * 100;
+          let parentPay = Y + honba * 100;
+          let parent = Object.entries(parentFlags).find(([k, v]) => v)[0];
+          newHolds[winner] += childPay * 2 + parentPay;
+          ["A", "B", "C", "D"].forEach(p => {
+            if (p !== winner) {
+              if (p === parent) {
+                newHolds[p] -= parentPay;
+              } else {
+                newHolds[p] -= childPay;
+              }
+            }
+          });
+        }
+      }
+      // 供託分（リーチ棒）は、立直者から既に差し引かれているため、和了者へ加算
+      newHolds[winner] += riichiSticks * 1000;
+
+      let players = calcFinalTotals(newHolds, totals);
+      let winFinal = players.find(p => p.name === winner).final;
+      let isTop = players.every(p => p.name === winner || p.final < winFinal);
+      if (isTop) {
+        if (X === 0 && (Y === undefined || Y === 0)) {
+          return "オールOK";
+        } else if (method === "tsumo" && !parentFlags[winner]) {
+          return `${X} / ${Y}`;
+        } else {
+          return X;
+        }
+      }
+    }
+    return "優勝不可";
+  }
+
+  /**
+   * doCalculate:
+   * 全シナリオ（ロン各相手＋ツモ）について計算し、エクセル風の結果表を作成して表示する。
+   */
+  function doCalculate() {
+    let totals = {
+      A: parseFloat(document.getElementById("totalA").value),
+      B: parseFloat(document.getElementById("totalB").value),
+      C: parseFloat(document.getElementById("totalC").value),
+      D: parseFloat(document.getElementById("totalD").value)
+    };
+    let holds = {
+      A: parseInt(document.getElementById("holdA").value),
+      B: parseInt(document.getElementById("holdB").value),
+      C: parseInt(document.getElementById("holdC").value),
+      D: parseInt(document.getElementById("holdD").value)
+    };
+    let parentFlags = {
+      A: document.getElementById("parentA").checked,
+      B: document.getElementById("parentB").checked,
+      C: document.getElementById("parentC").checked,
+      D: document.getElementById("parentD").checked
+    };
+    let honba = parseInt(document.getElementById("honba").value);
+    let riichiSticks = parseInt(document.getElementById("riichiSticks").value);
+
+    let errorMessages = "";
+    let totalSum = Object.values(totals).reduce((a, b) => a + b, 0);
+    if (totalSum !== 0) {
+      errorMessages += `<p class="warning">警告：トータルポイントの合計が0ではありません（合計: ${totalSum}）。</p>`;
+    }
+    let holdSum = Object.values(holds).reduce((a, b) => a + b, 0);
+    if (holdSum + riichiSticks * 1000 !== 100000) {
+      errorMessages += `<p class="warning">警告：持ち点の合計が100,000点ではありません（合計: ${holdSum + riichiSticks * 1000}）。</p>`;
+    }
+    let pCount = Object.values(parentFlags).filter(v => v).length;
+    if (pCount !== 1) {
+      errorMessages += `<p class="error">エラー：親は必ず1人だけチェックしてください（現在 ${pCount} 人）。</p>`;
+      document.getElementById("resultArea").innerHTML = errorMessages;
+      return;
+    }
+
+    let players = ["A", "B", "C", "D"];
+    let results = {};
+    players.forEach(w => {
+      results[w] = { ron: {}, tsumo: null };
+      players.forEach(l => {
+        if (l !== w) {
+          results[w].ron[l] = getMinPointsToWin(totals, holds, w, "ron", l, parentFlags, honba, riichiSticks);
+        }
+      });
+      results[w].tsumo = getMinPointsToWin(totals, holds, w, "tsumo", "", parentFlags, honba, riichiSticks);
+    });
+
+    let html = "<table class='resultTable'><tr><th>和了者</th>";
+    players.forEach(p => {
+      html += `<th>ロン from ${p}</th>`;
+    });
+    html += "<th>ツモ</th></tr>";
+
+    players.forEach(w => {
+      html += `<tr><th>${w}</th>`;
+      players.forEach(p => {
+        if (p === w) {
+          html += "<td>―</td>";
+        } else {
+          let val = results[w].ron[p];
+          html += `<td>${val === "優勝不可" ? "優勝不可" : val === "オールOK" ? "オールOK" : val + "点"}</td>`;
+        }
+      });
+      let tsumo = results[w].tsumo;
+      let tsumoDisplay = "";
+      if (typeof tsumo === "string") {
+        tsumoDisplay = tsumo;
+      } else {
+        if (parentFlags[w]) {
+          tsumoDisplay = tsumo + "オール";
+        } else {
+          tsumoDisplay = `${tsumo.childPay} / ${tsumo.parentPay}`;
+        }
+      }
+      html += `<td>${tsumoDisplay}</td></tr>`;
+    });
+    html += "</table>";
+
+    document.getElementById("resultArea").innerHTML = errorMessages + html;
+  }
+
+  function doReset() {
+    document.getElementById("totalA").value = "-25.5";
+    document.getElementById("totalB").value = "-47.5";
+    document.getElementById("totalC").value = "17.6";
+    document.getElementById("totalD").value = "55.4";
+    document.getElementById("holdA").value = "25800";
+    document.getElementById("holdB").value = "27500";
+    document.getElementById("holdC").value = "25700";
+    document.getElementById("holdD").value = "21000";
+    document.getElementById("parentA").checked = false;
+    document.getElementById("parentB").checked = false;
+    document.getElementById("parentC").checked = false;
+    document.getElementById("parentD").checked = false;
+    document.getElementById("honba").value = "0";
+    document.getElementById("riichiSticks").value = "0";
+    document.getElementById("resultArea").innerHTML = "";
+  }
+</script>
+</body>
+</html>
