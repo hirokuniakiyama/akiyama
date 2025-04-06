@@ -10,6 +10,7 @@
     input, select { width: 80px; }
     .error { color: red; }
     .warning { color: orange; }
+    a { text-decoration: none; color: blue; }
   </style>
 </head>
 <body>
@@ -17,9 +18,11 @@
   <p>各プレイヤーのトータルポイント (pt) と持ち点 (点) を入力してください。<br>
      持ち点は100点刻みで変動します。また、親を1人だけチェックしてください。<br>
      本場と供託も必要に応じて入力してください。<br>
-     現状、30000点持ち25000点返し、順位点 [1位:+50, 2位:+10, 3位:-10, 4位:-30]のMリーグルールのみ対応しています。<br>
-     ポイントの合計が0でない場合、また、持ち点と供託の合計が10万点にならない場合、警告が表示されますが計算結果は表示されます。</p>
+     現状、30000点持ち25000点返し、順位点はユーザー入力（デフォルト: 1位:+50, 2位:+10, 3位:-10, 4位:-30）のMリーグルールに対応しています。<br>
+     ポイントの合計が0でない場合、また、持ち点と供託の合計が10万点にならない場合、警告が表示されますが計算結果は表示されます。
+  </p>
 
+  <h2>プレイヤー情報</h2>
   <table>
     <tr>
       <th>プレイヤー</th>
@@ -53,21 +56,48 @@
     </tr>
   </table>
 
+  <h2>順位点設定</h2>
+  <p>各順位の順位点を入力してください（デフォルト: 1位:+50, 2位:+10, 3位:-10, 4位:-30）</p>
+  <table>
+    <tr>
+      <th>1位</th>
+      <th>2位</th>
+      <th>3位</th>
+      <th>4位</th>
+    </tr>
+    <tr>
+      <td><input type="number" id="rank1" value="50"></td>
+      <td><input type="number" id="rank2" value="10"></td>
+      <td><input type="number" id="rank3" value="-10"></td>
+      <td><input type="number" id="rank4" value="-30"></td>
+    </tr>
+  </table>
+
   <p>本場数: <input type="number" id="honba" value="0" min="0" step="1"> 本場</p>
   <p>供託（リーチ棒）本数: <input type="number" id="riichiSticks" value="0" min="0" step="1"> 本（1本=1000点）</p>
 
   <h2>結果表示</h2>
-  <p>以下の表は、各プレイヤー（和了者）について、各相手からのロン和了りと、ツモ和了りの場合の「優勝するために必要な最小和了点数」を求めたものです。<br>
+  <p>以下の表は、各プレイヤー（和了者）について、各相手からのロン和了りとツモ和了りの場合の「優勝するために必要な最小和了点数」を求めたものです。<br>
      ロンの場合は、セルにその相手から和了る必要点数 (例：「1300点」) を表示します。<br>
-     ツモの場合、和了者が子の場合は「X / Y」の形式、親の場合は「Xオール」と表示します。</p>
+     ツモの場合、和了者が子の場合は「X / (親：Y)」の形式、親の場合は「Xオール」と表示します。<br>
+     各セルの点数をクリックすると、クリックしたシナリオで和了った場合の詳細（各プレイヤーの新持ち点、持ち点差、順位点、半荘得失点、前回トータルpt、合計）が右側に表示されます。
+  </p>
   <div id="resultArea"></div>
+  <div id="detailArea" style="margin-top:20px;"></div>
 
   <button onclick="doCalculate()">計算する</button>
   <button onclick="doReset()">リセット</button>
 
 <script>
-  // Mリーグの固定順位点（通常は [1位:+50, 2位:+10, 3位:-10, 4位:-30]）
-  const RANK_POINTS = [50, 10, -10, -30];
+  // ユーザー入力可能な順位点を取得する
+  function getRankPoints() {
+    return [
+      parseFloat(document.getElementById("rank1").value),
+      parseFloat(document.getElementById("rank2").value),
+      parseFloat(document.getElementById("rank3").value),
+      parseFloat(document.getElementById("rank4").value)
+    ];
+  }
 
   // 各種和了り点数リスト（例）
   const PARENT_RON_POINTS = [
@@ -94,36 +124,30 @@
    * calcFinalTotals:
    * 各プレイヤーの最終トータルを計算する。
    * 最終トータル = (持ち点 - 30000)/1000 + 順位点（同率の場合は平均順位点） + トータルpt
+   * 同一の持ち点のグループでは、順位点を平均して割り当てる。
    */
-  function calcFinalTotals(modHoldings, totals) {
-    // 各プレイヤーオブジェクトを作成
+  function calcFinalTotals(modHoldings, totals, rankPoints) {
     let players = ["A", "B", "C", "D"].map(p => {
       return { name: p, hold: modHoldings[p], totalBefore: totals[p] };
     });
-    // 持ち点で降順にソート
     players.sort((a, b) => b.hold - a.hold);
-
-    // 同じ持ち点のグループごとに順位点を平均して割り当てる
     let currentRank = 1;
     for (let i = 0; i < players.length;) {
       let group = [players[i]];
       let j = i + 1;
-      // 同点グループを作成
       while (j < players.length && players[j].hold === players[i].hold) {
         group.push(players[j]);
         j++;
       }
       let groupSize = group.length;
-      // 固定順位点リストから、現在の順位から groupSize 分の値の合計を算出
       let sumRankPoints = 0;
       for (let k = 0; k < groupSize; k++) {
-        sumRankPoints += RANK_POINTS[currentRank - 1 + k];
+        sumRankPoints += rankPoints[currentRank - 1 + k];
       }
       let avgRankPoint = sumRankPoints / groupSize;
-      // 各グループメンバーに平均順位点を割り当て、最終トータルを計算
       group.forEach(player => {
         player.diff = (player.hold - 30000) / 1000;
-        player.rank = currentRank; // 同率なので、順位は同じ（参考用）
+        player.rank = currentRank;
         player.rankPoint = avgRankPoint;
         player.final = player.totalBefore + player.diff + player.rankPoint;
       });
@@ -201,10 +225,10 @@
           });
         }
       }
-      // 供託分（リーチ棒）は、立直者から既に差し引かれているため、和了者へ加算
+      // 供託分を加算（供託は既に立直者の持ち点から減られている前提なので和了者へ加算）
       newHolds[winner] += riichiSticks * 1000;
 
-      let players = calcFinalTotals(newHolds, totals);
+      let players = calcFinalTotals(newHolds, totals, getRankPoints());
       let winFinal = players.find(p => p.name === winner).final;
       let isTop = players.every(p => p.name === winner || p.final < winFinal);
       if (isTop) {
@@ -221,8 +245,128 @@
   }
 
   /**
+   * simulateScenario:
+   * 指定シナリオでの持ち点変動後の各プレイヤー情報を返す。
+   * @param {String} winner 和了者 ("A","B","C","D")
+   * @param {String} method "ron" or "tsumo"
+   * @param {String} target (ronの場合の放銃者、tsumoの場合は空文字)
+   * @param {number|string} scoreVal 和了点。ロン・親の場合は数値、子ツモの場合は "X / Y" 形式
+   * @param {Object} totals トータルpt {A,B,C,D}
+   * @param {Object} holds 持ち点 {A,B,C,D}
+   * @param {Object} parentFlags {A,B,C,D}
+   * @param {number} honba 本場数
+   * @param {number} riichiSticks 供託本数
+   * @param {Array} rankPoints ユーザー入力の順位点配列
+   * @returns {Array} 各プレイヤー情報オブジェクトの配列（calcFinalTotalsの戻り値）
+   */
+  function simulateScenario(winner, method, target, scoreVal, totals, holds, parentFlags, honba, riichiSticks, rankPoints) {
+    let newHolds = Object.assign({}, holds);
+    let X, Y;
+    if (method === "ron") {
+      X = Number(scoreVal);
+      let ronPoints = X + honba * 300;
+      newHolds[winner] += ronPoints;
+      newHolds[target] -= ronPoints;
+    } else if (method === "tsumo") {
+      if (parentFlags[winner]) {
+        X = Number(scoreVal);
+        let tsumoPoints = X + honba * 100;
+        newHolds[winner] += tsumoPoints * 3;
+        ["A", "B", "C", "D"].forEach(p => {
+          if (p !== winner) newHolds[p] -= tsumoPoints;
+        });
+      } else {
+        let parts = scoreVal.split("/");
+        X = Number(parts[0].trim());
+        Y = Number(parts[1].trim());
+        let childPay = X + honba * 100;
+        let parentPay = Y + honba * 100;
+        let parent = Object.entries(parentFlags).find(([k, v]) => v)[0];
+        newHolds[winner] += childPay * 2 + parentPay;
+        ["A", "B", "C", "D"].forEach(p => {
+          if (p !== winner) {
+            if (p === parent) {
+              newHolds[p] -= parentPay;
+            } else {
+              newHolds[p] -= childPay;
+            }
+          }
+        });
+      }
+    }
+    // 供託分加算
+    newHolds[winner] += riichiSticks * 1000;
+    return calcFinalTotals(newHolds, totals, rankPoints);
+  }
+
+  /**
+   * showDetail:
+   * 結果表の各セルのリンククリック時に、詳細情報（各プレイヤーの新持ち点、持ち点差、順位点、半荘得失点、前回トータルpt、合計）を表示する。
+   * @param {String} winner 和了者
+   * @param {String} method "ron" or "tsumo"
+   * @param {String} target (ronの場合の放銃者、tsumoの場合は空文字)
+   * @param {string|number} scoreVal 和了点（ロン・親の場合は数値、子ツモの場合は "X / Y" 形式）
+   */
+  function showDetail(winner, method, target, scoreVal) {
+    let totals = {
+      A: parseFloat(document.getElementById("totalA").value),
+      B: parseFloat(document.getElementById("totalB").value),
+      C: parseFloat(document.getElementById("totalC").value),
+      D: parseFloat(document.getElementById("totalD").value)
+    };
+    let holds = {
+      A: parseInt(document.getElementById("holdA").value),
+      B: parseInt(document.getElementById("holdB").value),
+      C: parseInt(document.getElementById("holdC").value),
+      D: parseInt(document.getElementById("holdD").value)
+    };
+    let parentFlags = {
+      A: document.getElementById("parentA").checked,
+      B: document.getElementById("parentB").checked,
+      C: document.getElementById("parentC").checked,
+      D: document.getElementById("parentD").checked
+    };
+    let honba = parseInt(document.getElementById("honba").value);
+    let riichiSticks = parseInt(document.getElementById("riichiSticks").value);
+    let rankPoints = getRankPoints();
+
+    let players = simulateScenario(winner, method, target, scoreVal, totals, holds, parentFlags, honba, riichiSticks, rankPoints);
+    let detailHtml = "<h3>【詳細】" + winner + "が" + (method === "ron" ? ("ロン from " + target) : (method === "tsumo" ? "ツモ" : "")) + "で" + scoreVal + "点和了った場合</h3>";
+    detailHtml += "<table><tr><th>プレイヤー</th><th>新持ち点</th><th>持ち点差</th><th>順位点</th><th>半荘得失点</th><th>前回トータルpt</th><th>合計</th></tr>";
+    players.sort((a, b) => a.name.localeCompare(b.name));
+    players.forEach(p => {
+      let diff = ((p.hold - 30000) / 1000).toFixed(1);
+      detailHtml += `<tr>
+        <td>${p.name}</td>
+        <td>${p.hold}</td>
+        <td>${diff}</td>
+        <td>${p.rankPoint.toFixed(1)}</td>
+        <td>${(p.diff + p.rankPoint).toFixed(1)}</td>
+        <td>${p.totalBefore}</td>
+        <td>${p.final.toFixed(1)}</td>
+      </tr>`;
+    });
+    detailHtml += "</table>";
+    document.getElementById("detailArea").innerHTML = detailHtml;
+  }
+
+  /**
+   * getRankPoints:
+   * ユーザー入力の順位点を取得する。
+   */
+  function getRankPoints() {
+    return [
+      parseFloat(document.getElementById("rank1").value),
+      parseFloat(document.getElementById("rank2").value),
+      parseFloat(document.getElementById("rank3").value),
+      parseFloat(document.getElementById("rank4").value)
+    ];
+  }
+
+  /**
    * doCalculate:
    * 全シナリオ（ロン各相手＋ツモ）について計算し、エクセル風の結果表を作成して表示する。
+   * 各セルの点数はリンク化しており、クリックすると showDetail() が呼ばれて詳細が表示される。
    */
   function doCalculate() {
     let totals = {
@@ -245,6 +389,7 @@
     };
     let honba = parseInt(document.getElementById("honba").value);
     let riichiSticks = parseInt(document.getElementById("riichiSticks").value);
+    let rankPoints = getRankPoints();
 
     let errorMessages = "";
     let totalSum = Object.values(totals).reduce((a, b) => a + b, 0);
@@ -268,10 +413,22 @@
       results[w] = { ron: {}, tsumo: null };
       players.forEach(l => {
         if (l !== w) {
-          results[w].ron[l] = getMinPointsToWin(totals, holds, w, "ron", l, parentFlags, honba, riichiSticks);
+          let res = getMinPointsToWin(totals, holds, w, "ron", l, parentFlags, honba, riichiSticks);
+          results[w].ron[l] = (res === "優勝不可" || res === "オールOK") 
+            ? res 
+            : `<a href="#" onclick="showDetail('${w}','ron','${l}','${res}')" >${res}点</a>`;
         }
       });
-      results[w].tsumo = getMinPointsToWin(totals, holds, w, "tsumo", "", parentFlags, honba, riichiSticks);
+      let tsumoRes = getMinPointsToWin(totals, holds, w, "tsumo", "", parentFlags, honba, riichiSticks);
+      if (typeof tsumoRes === "string") {
+        results[w].tsumo = `<a href="#" onclick="showDetail('${w}','tsumo','','${tsumoRes}')" >${tsumoRes}</a>`;
+      } else {
+        if (parentFlags[w]) {
+          results[w].tsumo = `<a href="#" onclick="showDetail('${w}','tsumo','','${tsumoRes}')" >${tsumoRes}オール</a>`;
+        } else {
+          results[w].tsumo = `<a href="#" onclick="showDetail('${w}','tsumo','','${tsumoRes.childPay} / ${tsumoRes.parentPay}')" >${tsumoRes.childPay} / ${tsumoRes.parentPay}</a>`;
+        }
+      }
     });
 
     let html = "<table class='resultTable'><tr><th>和了者</th>";
@@ -286,22 +443,11 @@
         if (p === w) {
           html += "<td>―</td>";
         } else {
-          let val = results[w].ron[p];
-          html += `<td>${val === "優勝不可" ? "優勝不可" : val === "オールOK" ? "オールOK" : val + "点"}</td>`;
+          let cell = results[w].ron[p];
+          html += `<td>${cell}</td>`;
         }
       });
-      let tsumo = results[w].tsumo;
-      let tsumoDisplay = "";
-      if (typeof tsumo === "string") {
-        tsumoDisplay = tsumo;
-      } else {
-        if (parentFlags[w]) {
-          tsumoDisplay = tsumo + "オール";
-        } else {
-          tsumoDisplay = `${tsumo.childPay} / ${tsumo.parentPay}`;
-        }
-      }
-      html += `<td>${tsumoDisplay}</td></tr>`;
+      html += `<td>${results[w].tsumo}</td></tr>`;
     });
     html += "</table>";
 
@@ -321,9 +467,14 @@
     document.getElementById("parentB").checked = false;
     document.getElementById("parentC").checked = false;
     document.getElementById("parentD").checked = false;
+    document.getElementById("rank1").value = "50";
+    document.getElementById("rank2").value = "10";
+    document.getElementById("rank3").value = "-10";
+    document.getElementById("rank4").value = "-30";
     document.getElementById("honba").value = "0";
     document.getElementById("riichiSticks").value = "0";
     document.getElementById("resultArea").innerHTML = "";
+    document.getElementById("detailArea").innerHTML = "";
   }
 </script>
 </body>
