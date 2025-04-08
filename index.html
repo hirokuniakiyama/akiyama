@@ -4,29 +4,105 @@
   <meta charset="UTF-8">
   <title>【麻雀】優勝&トーナメント勝ち上がり条件計算ツール</title>
   <style>
-    body { font-family: sans-serif; margin: 20px; }
-    table { border-collapse: collapse; margin-bottom: 1em; }
-    th, td { border: 1px solid #ccc; padding: 5px; text-align: center; }
-    input, select { width: 80px; }
-    .error { color: red; }
-    .warning { color: orange; }
-    a { text-decoration: none; color: blue; }
+    /* 全体のスタイル */
+    body {
+      font-family: 'MS Sans Serif', Arial, sans-serif;
+      margin: 20px;
+      background: linear-gradient(to bottom, #f5e6ff, #e6f7fa);
+    }
+
+    /* タイトルデザイン */
+    h1 {
+      padding: 0.5em;
+      color: #494949;
+      background: #fffaf4;
+      border-left: solid 5px #ffaf58;
+      border-bottom: solid 2px #dadada;
+      text-align: center;
+      text-shadow: 2px 2px 4px #666; /* ①ドロップシャドウを追加 */
+    }
+
+    /* 見出しデザイン */
+    h2, h3 {
+      position: relative;
+      padding: 1rem 0.5rem;
+      color: #333;
+      text-shadow: 2px 2px 4px #666; /* ①ドロップシャドウを追加 */
+    }
+    h2::after, h3::after {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 6px;
+      content: '';
+      border-radius: 3px;
+      background-image: linear-gradient(to left, #ffccff 0%, #99ccff 100%);
+    }
+
+    /* テーブルデザイン */
+    table {
+      border-collapse: collapse;
+      margin-bottom: 1em;
+      background-color: #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+
+    /* 入力要素 */
+    input, select {
+      width: 80px;
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .player-name-input {
+      width: 50px;
+    }
+
+    /* その他のスタイル */
+    .error { color: #ff6347; }
+    .warning { color: #ffa500; }
+    a { text-decoration: none; color: #4682b4; }
     .input-container { display: flex; align-items: flex-start; }
     .settings-container { margin-left: 20px; }
     .result-container { display: flex; align-items: flex-start; }
     #detailArea { margin-left: 20px; }
     .button-container { margin-top: 20px; }
-    .player-name-input { width: 50px; }
+
+    /* フッターデザイン */
+    footer {
+      margin-top: 40px;
+      padding-top: 10px;
+      border-top: 1px solid #ccc;
+      text-align: center;
+      color: #666;
+    }
+
+    /* 説明文のデザイン（②目立たせる工夫） */
+    .description {
+      background-color: #ffe6f0; /* 薄いピンクの背景 */
+      padding: 15px;
+      border: 1px solid #ffccff; /* 柔らかいピンクのボーダー */
+      border-radius: 10px; /* 角を丸く */
+      font-size: 1.1em; /* 文字サイズを少し大きく */
+      color: #333; /* 濃いグレーで視認性向上 */
+      margin-bottom: 20px; /* 下に余白 */
+    }
   </style>
 </head>
 <body>
   <h1>【麻雀】優勝&トーナメント勝ち上がり条件計算ツール</h1>
-  <p>
+  <div class="description">
     各プレイヤーのオーラス前トータルptと持ち点（点）を入力し、親を1人だけチェックしてください。<br>
     本場数、供託（1本=1000点）、順位点は必要に応じて入力してください。<br>
     必要事項入力後「計算する」ボタンをクリックすると、<br>
     オーラスに優勝する為の最小和了り点と2位以上になる為の最小和了り点一覧が表示されます(多分)。
-  </p>
+  </div>
 
   <!-- 入力部 -->
   <div class="input-container">
@@ -104,8 +180,12 @@
     <div id="detailArea"></div>
   </div>
 
+  <!-- フッター -->
+  <footer>
+    ©2025
+  </footer>
+
   <script>
-    // プレイヤー名を取得する関数
     function getPlayerNames() {
       return {
         A: document.getElementById("nameA").value || "A",
@@ -115,7 +195,6 @@
       };
     }
 
-    // ユーザー入力可能な順位点を取得する
     function getRankPoints() {
       return [
         parseFloat(document.getElementById("rank1").value),
@@ -125,7 +204,6 @@
       ];
     }
 
-    // 各種和了り点数リスト（例）
     const PARENT_RON_POINTS = [
       1500, 2000, 2400, 2900, 3400, 3900, 4400, 4800, 5300, 5800, 6800, 7700, 8700,
       9600, 10600, 11600, 12000, 18000, 24000, 36000, 48000, 96000, 144000
@@ -146,12 +224,6 @@
       [24000, 48000]
     ];
 
-    /**
-     * calcFinalTotals:
-     * 各プレイヤーの最終トータルを計算する。
-     * 最終トータル = (持ち点 - 30000)/1000 + 順位点（同率の場合は平均順位点） + トータルpt
-     * 同一の持ち点のグループでは、順位点を平均して割り当てる。
-     */
     function calcFinalTotals(modHoldings, totals, rankPoints) {
       let playerNames = getPlayerNames();
       let players = ["A", "B", "C", "D"].map(p => {
@@ -189,20 +261,16 @@
       return players;
     }
 
-    /**
-     * getMinPointsToWin:
-     * 指定シナリオにおいて、和了者が優勝するための最小必要和了点数を返す。
-     */
     function getMinPointsToWin(totals, holds, winner, method, target, parentFlags, honba, riichiSticks) {
       let pointsList;
       if (method === "ron") {
         pointsList = parentFlags[winner] ? PARENT_RON_POINTS : CHILD_RON_POINTS;
-        pointsList = [0, ...pointsList]; // ロンの場合も0点を追加
+        pointsList = [0, ...pointsList];
       } else if (method === "tsumo") {
         if (parentFlags[winner]) {
-          pointsList = [0, ...PARENT_TSUMO_POINTS]; // 親のツモに0点を追加
+          pointsList = [0, ...PARENT_TSUMO_POINTS];
         } else {
-          pointsList = [[0, 0], ...CHILD_TSUMO_POINTS]; // 子のツモに[0, 0]を追加
+          pointsList = [[0, 0], ...CHILD_TSUMO_POINTS];
         }
       }
 
@@ -216,33 +284,38 @@
         }
         let newHolds = Object.assign({}, holds);
         if (method === "ron") {
-          let ronPoints = X + honba * 300;
-          newHolds[winner] += ronPoints;
-          newHolds[target] -= ronPoints;
+          if (X > 0) { // 和了点が0でない場合のみ処理
+            let ronPoints = X + honba * 300;
+            newHolds[winner] += ronPoints;
+            newHolds[target] -= ronPoints;
+            newHolds[winner] += riichiSticks * 1000; // 供託を加算
+          }
         } else if (method === "tsumo") {
-          if (parentFlags[winner]) {
-            let tsumoPoints = X + honba * 100;
-            newHolds[winner] += tsumoPoints * 3;
-            ["A", "B", "C", "D"].forEach(p => {
-              if (p !== winner) newHolds[p] -= tsumoPoints;
-            });
-          } else {
-            let childPay = X + honba * 100;
-            let parentPay = Y + honba * 100;
-            let parent = Object.entries(parentFlags).find(([k, v]) => v)[0];
-            newHolds[winner] += childPay * 2 + parentPay;
-            ["A", "B", "C", "D"].forEach(p => {
-              if (p !== winner) {
-                if (p === parent) {
-                  newHolds[p] -= parentPay;
-                } else {
-                  newHolds[p] -= childPay;
+          if ((parentFlags[winner] && X > 0) || (!parentFlags[winner] && (X > 0 || Y > 0))) { // 和了点が0でない場合のみ処理
+            if (parentFlags[winner]) {
+              let tsumoPoints = X + honba * 100;
+              newHolds[winner] += tsumoPoints * 3;
+              ["A", "B", "C", "D"].forEach(p => {
+                if (p !== winner) newHolds[p] -= tsumoPoints;
+              });
+            } else {
+              let childPay = X + honba * 100;
+              let parentPay = Y + honba * 100;
+              let parent = Object.entries(parentFlags).find(([k, v]) => v)[0];
+              newHolds[winner] += childPay * 2 + parentPay;
+              ["A", "B", "C", "D"].forEach(p => {
+                if (p !== winner) {
+                  if (p === parent) {
+                    newHolds[p] -= parentPay;
+                  } else {
+                    newHolds[p] -= childPay;
+                  }
                 }
-              }
-            });
+              });
+            }
+            newHolds[winner] += riichiSticks * 1000; // 供託を加算
           }
         }
-        newHolds[winner] += riichiSticks * 1000;
 
         let players = calcFinalTotals(newHolds, totals, getRankPoints());
         let winFinal = players.find(p => p.key === winner).final;
@@ -264,20 +337,16 @@
       return "優勝不可";
     }
 
-    /**
-     * getMinPointsForTop2:
-     * 指定シナリオにおいて、和了者が2位以内に入るための最小必要和了点数を返す。
-     */
     function getMinPointsForTop2(totals, holds, winner, method, target, parentFlags, honba, riichiSticks) {
       let pointsList;
       if (method === "ron") {
         pointsList = parentFlags[winner] ? PARENT_RON_POINTS : CHILD_RON_POINTS;
-        pointsList = [0, ...pointsList]; // ロンの場合も0点を追加
+        pointsList = [0, ...pointsList];
       } else if (method === "tsumo") {
         if (parentFlags[winner]) {
-          pointsList = [0, ...PARENT_TSUMO_POINTS]; // 親のツモに0点を追加
+          pointsList = [0, ...PARENT_TSUMO_POINTS];
         } else {
-          pointsList = [[0, 0], ...CHILD_TSUMO_POINTS]; // 子のツモに[0, 0]を追加
+          pointsList = [[0, 0], ...CHILD_TSUMO_POINTS];
         }
       }
 
@@ -291,33 +360,38 @@
         }
         let newHolds = Object.assign({}, holds);
         if (method === "ron") {
-          let ronPoints = X + honba * 300;
-          newHolds[winner] += ronPoints;
-          newHolds[target] -= ronPoints;
+          if (X > 0) { // 和了点が0でない場合のみ処理
+            let ronPoints = X + honba * 300;
+            newHolds[winner] += ronPoints;
+            newHolds[target] -= ronPoints;
+            newHolds[winner] += riichiSticks * 1000; // 供託を加算
+          }
         } else if (method === "tsumo") {
-          if (parentFlags[winner]) {
-            let tsumoPoints = X + honba * 100;
-            newHolds[winner] += tsumoPoints * 3;
-            ["A", "B", "C", "D"].forEach(p => {
-              if (p !== winner) newHolds[p] -= tsumoPoints;
-            });
-          } else {
-            let childPay = X + honba * 100;
-            let parentPay = Y + honba * 100;
-            let parent = Object.entries(parentFlags).find(([k, v]) => v)[0];
-            newHolds[winner] += childPay * 2 + parentPay;
-            ["A", "B", "C", "D"].forEach(p => {
-              if (p !== winner) {
-                if (p === parent) {
-                  newHolds[p] -= parentPay;
-                } else {
-                  newHolds[p] -= childPay;
+          if ((parentFlags[winner] && X > 0) || (!parentFlags[winner] && (X > 0 || Y > 0))) { // 和了点が0でない場合のみ処理
+            if (parentFlags[winner]) {
+              let tsumoPoints = X + honba * 100;
+              newHolds[winner] += tsumoPoints * 3;
+              ["A", "B", "C", "D"].forEach(p => {
+                if (p !== winner) newHolds[p] -= tsumoPoints;
+              });
+            } else {
+              let childPay = X + honba * 100;
+              let parentPay = Y + honba * 100;
+              let parent = Object.entries(parentFlags).find(([k, v]) => v)[0];
+              newHolds[winner] += childPay * 2 + parentPay;
+              ["A", "B", "C", "D"].forEach(p => {
+                if (p !== winner) {
+                  if (p === parent) {
+                    newHolds[p] -= parentPay;
+                  } else {
+                    newHolds[p] -= childPay;
+                  }
                 }
-              }
-            });
+              });
+            }
+            newHolds[winner] += riichiSticks * 1000; // 供託を加算
           }
         }
-        newHolds[winner] += riichiSticks * 1000;
 
         let players = calcFinalTotals(newHolds, totals, getRankPoints());
         let winFinal = players.find(p => p.key === winner).final;
@@ -339,53 +413,53 @@
       return "2位以内不可";
     }
 
-    /**
-     * simulateScenario:
-     * 指定シナリオでの持ち点変動後の各プレイヤー情報を返す。
-     */
     function simulateScenario(winner, method, target, scoreVal, totals, holds, parentFlags, honba, riichiSticks, rankPoints) {
       let newHolds = Object.assign({}, holds);
       let X, Y;
       if (method === "ron") {
         X = Number(scoreVal);
-        let ronPoints = X + honba * 300;
-        newHolds[winner] += ronPoints;
-        newHolds[target] -= ronPoints;
+        if (X > 0) { // 和了点が0でない場合のみ処理
+          let ronPoints = X + honba * 300;
+          newHolds[winner] += ronPoints;
+          newHolds[target] -= ronPoints;
+          newHolds[winner] += riichiSticks * 1000; // 供託を加算
+        }
       } else if (method === "tsumo") {
         if (parentFlags[winner]) {
           X = Number(scoreVal);
-          let tsumoPoints = X + honba * 100;
-          newHolds[winner] += tsumoPoints * 3;
-          ["A", "B", "C", "D"].forEach(p => {
-            if (p !== winner) newHolds[p] -= tsumoPoints;
-          });
+          if (X > 0) { // 和了点が0でない場合のみ処理
+            let tsumoPoints = X + honba * 100;
+            newHolds[winner] += tsumoPoints * 3;
+            ["A", "B", "C", "D"].forEach(p => {
+              if (p !== winner) newHolds[p] -= tsumoPoints;
+            });
+            newHolds[winner] += riichiSticks * 1000; // 供託を加算
+          }
         } else {
           let parts = scoreVal.split("/");
           X = Number(parts[0].trim());
           Y = Number(parts[1].trim());
-          let childPay = X + honba * 100;
-          let parentPay = Y + honba * 100;
-          let parent = Object.entries(parentFlags).find(([k, v]) => v)[0];
-          newHolds[winner] += childPay * 2 + parentPay;
-          ["A", "B", "C", "D"].forEach(p => {
-            if (p !== winner) {
-              if (p === parent) {
-                newHolds[p] -= parentPay;
-              } else {
-                newHolds[p] -= childPay;
+          if (X > 0 || Y > 0) { // 和了点が0でない場合のみ処理
+            let childPay = X + honba * 100;
+            let parentPay = Y + honba * 100;
+            let parent = Object.entries(parentFlags).find(([k, v]) => v)[0];
+            newHolds[winner] += childPay * 2 + parentPay;
+            ["A", "B", "C", "D"].forEach(p => {
+              if (p !== winner) {
+                if (p === parent) {
+                  newHolds[p] -= parentPay;
+                } else {
+                  newHolds[p] -= childPay;
+                }
               }
-            }
-          });
+            });
+            newHolds[winner] += riichiSticks * 1000; // 供託を加算
+          }
         }
       }
-      newHolds[winner] += riichiSticks * 1000;
       return calcFinalTotals(newHolds, totals, rankPoints);
     }
 
-    /**
-     * showDetail:
-     * 結果表の各セルのリンククリック時に、詳細情報を表示する。
-     */
     function showDetail(winnerKey, method, targetKey, scoreVal) {
       let playerNames = getPlayerNames();
       let winner = playerNames[winnerKey];
@@ -433,10 +507,6 @@
       document.getElementById("detailArea").innerHTML = detailHtml;
     }
 
-    /**
-     * doCalculate:
-     * 全シナリオについて、優勝および2位以内に入るための最小和了点数を計算し、2つの表を表示する。
-     */
     function doCalculate() {
       let playerNames = getPlayerNames();
       let totals = {
@@ -463,8 +533,8 @@
 
       let errorMessages = "";
       let totalSum = Object.values(totals).reduce((a, b) => a + b, 0);
-      if (totalSum !== 0) {
-        errorMessages += `<p class="warning">警告：トータルポイントの合計が0ではありません（合計: ${totalSum}）。</p>`;
+      if (Math.abs(totalSum) > 0.0001) { // 許容誤差を0.0001に設定
+        errorMessages += `<p class="warning">警告：トータルポイントの合計が0ではありません（合計: ${totalSum.toFixed(2)}）。</p>`;
       }
       let holdSum = Object.values(holds).reduce((a, b) => a + b, 0);
       if (holdSum + riichiSticks * 1000 !== 100000) {
@@ -479,7 +549,6 @@
 
       let players = ["A", "B", "C", "D"];
 
-      // 優勝条件の計算
       let winResults = {};
       players.forEach(w => {
         winResults[w] = { ron: {}, tsumo: null };
@@ -497,7 +566,6 @@
           : `<a href="#" onclick="showDetail('${w}','tsumo','','${tsumoRes}')" >${tsumoRes}</a>`;
       });
 
-      // 2位以内に入る条件の計算
       let top2Results = {};
       players.forEach(w => {
         top2Results[w] = { ron: {}, tsumo: null };
@@ -515,7 +583,6 @@
           : `<a href="#" onclick="showDetail('${w}','tsumo','','${tsumoRes}')" >${tsumoRes}</a>`;
       });
 
-      // 優勝条件の表
       let winHtml = "<h3>優勝するために必要な最小和了点数</h3><table class='resultTable'><tr><th>和了者</th>";
       players.forEach(p => {
         winHtml += `<th>ロン from ${playerNames[p]}</th>`;
@@ -534,7 +601,6 @@
       });
       winHtml += "</table>";
 
-      // 2位以内に入るための表
       let top2Html = "<h3>2位以内に入るために必要な最小和了点数</h3><table class='resultTable'><tr><th>和了者</th>";
       players.forEach(p => {
         top2Html += `<th>ロン from ${playerNames[p]}</th>`;
