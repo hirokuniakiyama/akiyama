@@ -4,102 +4,215 @@
   <meta charset="UTF-8">
   <title>【麻雀】優勝&トーナメント勝ち上がり条件計算ツール</title>
   <style>
-    /* 全体のスタイル */
-    body {
-      font-family: 'MS Sans Serif', Arial, sans-serif;
-      margin: 20px;
-      background: linear-gradient(to bottom, #f5e6ff, #e6f7fa);
-    }
+/* 全体のスタイル */
+/* 全体のスタイル */
+body {
+  font-family: 'MS Sans Serif', Arial, sans-serif;
+  margin: 20px;
+  background: linear-gradient(to bottom, #f5e6ff, #e6f7fa);
+}
+/* タイトルデザイン */
+h1 {
+  padding: 0.25em;
+  color: #494949;
+  background: #fffaf4;
+  border-left: solid 5px #ffaf58;
+  border-bottom: solid 2px #dadada;
+  text-align: center;
+  text-shadow: 2px 2px 4px #666;
+}
+/* 見出しデザイン */
+h3, h4 {
+  position: relative;
+  padding: 0.5rem 0.25rem;
+  color: #333;
+  text-shadow: 2px 2px 4px #666;
+}
+h3::after, h4::after {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  content: '';
+  border-radius: 3px;
+  background-image: linear-gradient(to left, #ffccff 0%, #99ccff 100%);
+}
+/* テーブルデザイン */
+table {
+  border-collapse: collapse;
+  margin-bottom: 0.5em;
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+}
+/* 入力要素 */
+input, select {
+  width: 80px;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.player-name-input {
+  width: 50px;
+}
+/* その他のスタイル */
+.error { color: #ff6347; }
+.warning { color: #ffa500; }
+a { text-decoration: none; color: #4682b4; }
+.condition { color: #ff6347; font-size: 0.9em; cursor: pointer; }
+.condition-note { color: #ff6347; font-size: 0.9em; margin-bottom: 5px; }
+.input-container { display: flex; align-items: flex-start; }
+.settings-container { margin-left: 10px; }
+.result-container { margin-top: 10px; }
 
-    /* タイトルデザイン */
-    h1 {
-      padding: 0.5em;
-      color: #494949;
-      background: #fffaf4;
-      border-left: solid 5px #ffaf58;
-      border-bottom: solid 2px #dadada;
-      text-align: center;
-      text-shadow: 2px 2px 4px #666;
-    }
+/* ボタンコンテナのスタイル */
+.button-container {
+  margin-top: 15px;
+  display: flex;
+  gap: 10px;
+}
 
-    /* 見出しデザイン */
-    h2, h3 {
-      position: relative;
-      padding: 1rem 0.5rem;
-      color: #333;
-      text-shadow: 2px 2px 4px #666;
-    }
-    h2::after, h3::after {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 6px;
-      content: '';
-      border-radius: 3px;
-      background-image: linear-gradient(to left, #ffccff 0%, #99ccff 100%);
-    }
+/* ボタンの基本デザイン */
+.button-container button {
+  position: relative;
+  display: inline-block;
+  padding: 0.6em 1.2em;
+  text-decoration: none;
+  color: #333;
+  background: #f0f0f0;
+  border-radius: 4px;
+  border: solid 1px #ccc;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.5);
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: .4s;
+  overflow: hidden;
+}
 
-    /* テーブルデザイン */
-    table {
-      border-collapse: collapse;
-      margin-bottom: 1em;
-      background-color: #fff;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-    }
+/* ストライプの陰影効果 */
+.button-container button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -25px;
+  width: 20px;
+  background-image: linear-gradient(
+    -45deg,
+    transparent 33%,
+    rgba(0, 0, 0, 0.05) 33%,
+    rgba(0, 0, 0, 0.05) 66%,
+    transparent 66%
+  );
+  background-size: 20px 20px;
+  animation: stripe 3s linear infinite;
+}
 
-    /* 入力要素 */
-    input, select {
-      width: 80px;
-      padding: 5px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    .player-name-input {
-      width: 50px;
-    }
+/* 絵文字とアニメーションを.animate-emojiクラスを持つボタンにのみ適用 */
+.button-container button.animate-emoji::after {
+  content: '👻';
+  position: absolute;
+  top: 50%;
+  left: -20px;
+  font-size: 16px;
+  transform: translateY(-50%);
+  animation: cat-emoji 3s linear infinite;
+}
 
-    /* その他のスタイル */
-    .error { color: #ff6347; }
-    .warning { color: #ffa500; }
-    a { text-decoration: none; color: #4682b4; }
-    .condition { color: #ff6347; font-size: 0.9em; cursor: pointer; }
-    .condition-note { color: #ff6347; font-size: 0.9em; margin-bottom: 10px; }
-    .input-container { display: flex; align-items: flex-start; }
-    .settings-container { margin-left: 20px; }
-    .result-container { display: flex; align-items: flex-start; }
-    #detailArea { margin-left: 20px; }
-    .button-container { margin-top: 20px; }
+/* ホバー時の効果 */
+.button-container button:hover {
+  background-color: #e0e0e0;
+  transform: translateY(1px);
+}
 
-    /* フッターデザイン */
-    footer {
-      margin-top: 40px;
-      padding-top: 10px;
-      border-top: 1px solid #ccc;
-      text-align: center;
-      color: #666;
-    }
+/* クリック時の効果 */
+.button-container button:active {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+  transform: translateY(2px);
+}
 
-    /* 説明文のデザイン */
-    .description {
-      background-color: #ffe6f0;
-      padding: 15px;
-      border: 1px solid #ffccff;
-      border-radius: 10px;
-      font-size: 1.1em;
-      color: #333;
-      margin-bottom: 20px;
-    }
+/* 絵文字のアニメーション */
+@keyframes cat-emoji {
+  0% {
+    left: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  25% {
+    left: calc(25% - 10px);
+    top: 30%;
+    transform: translateY(-30%);
+  }
+  50% {
+    left: calc(50% - 10px);
+    top: 70%;
+    transform: translateY(-70%);
+  }
+  75% {
+    left: calc(75% - 10px);
+    top: 30%;
+    transform: translateY(-30%);
+  }
+  100% {
+    left: calc(100% + 20px);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
 
-    #currentFinalPtTable th, #currentFinalPtTable td {
-      width: 100px; /* 必要に応じて調整 */
-      text-align: center;
-    }
+/* 横並び用 */
+.side-by-side {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+/* フッターデザイン */
+footer {
+  margin-top: 20px;
+  padding-top: 5px;
+  border-top: 1px solid #ccc;
+  text-align: center;
+  color: #666;
+}
+/* 説明文のデザイン */
+.description {
+  background-color: #ffe6f0;
+  padding: 8px;
+  border: 1px solid #ffccff;
+  border-radius: 10px;
+  font-size: 1.1em;
+  color: #333;
+  margin-bottom: 5px;
+}
+#currentFinalPtTable th, #currentFinalPtTable td {
+  width: 100px;
+  text-align: center;
+}
+h2 {
+  display: inline-block;
+  position: relative;
+  padding: 0.15em;
+  background: #fffaf4;
+  color: #333;
+  text-shadow: 2px 2px 4px #666;
+}
+h2::before {
+  position: absolute;
+  content: '';
+  top: 100%;
+  left: 0;
+  border: none;
+  border-bottom: solid 15px transparent;
+  border-right: solid 20px rgb(149, 158, 155);
+}
+
   </style>
 </head>
 <body>
@@ -110,12 +223,11 @@
     「計算する」ボタンをクリックすると、優勝するための最小和了り点と2位以上に入るための最小和了り点が表示されます。<br>
     「条件あり」と表示された場合は、条件達成する点数に制限があります。詳細を確認するにはテキストをクリックしてください。
   </div>
-
   <!-- 入力部 -->
   <div class="input-container">
     <!-- プレイヤー情報 -->
     <div>
-      <h2>プレイヤー情報</h2>
+      <h3>🐾 プレイヤー情報</h3>
       <table>
         <tr>
           <th>プレイヤー</th>
@@ -127,30 +239,30 @@
           <td><input type="text" id="nameA" class="player-name-input" value="A"></td>
           <td><input type="number" id="totalA" value="0" step="0.1"></td>
           <td><input type="number" id="holdA" value="25000" step="100"></td>
-          <td><input type="checkbox" id="parentA"></td>
+          <td><input type="radio" name="parent" id="parentA"></td>
         </tr>
         <tr>
           <td><input type="text" id="nameB" class="player-name-input" value="B"></td>
           <td><input type="number" id="totalB" value="0" step="0.1"></td>
           <td><input type="number" id="holdB" value="25000" step="100"></td>
-          <td><input type="checkbox" id="parentB"></td>
+          <td><input type="radio" name="parent" id="parentB"></td>
         </tr>
         <tr>
           <td><input type="text" id="nameC" class="player-name-input" value="C"></td>
           <td><input type="number" id="totalC" value="0" step="0.1"></td>
           <td><input type="number" id="holdC" value="25000" step="100"></td>
-          <td><input type="checkbox" id="parentC"></td>
+          <td><input type="radio" name="parent" id="parentC"></td>
         </tr>
         <tr>
           <td><input type="text" id="nameD" class="player-name-input" value="D"></td>
           <td><input type="number" id="totalD" value="0" step="0.1"></td>
           <td><input type="number" id="holdD" value="25000" step="100"></td>
-          <td><input type="checkbox" id="parentD"></td>
+          <td><input type="radio" name="parent" id="parentD" checked></td>
         </tr>
       </table>
 
       <!-- 現時点最終pt表示（横列） -->
-      <h3>現時点トータルpt</h3>
+      <h4>🐾 現時点トータルpt</h4>
       <table id="currentFinalPtTable">
         <tr>
           <th id="finalNameA"></th>
@@ -169,7 +281,7 @@
 
     <!-- 順位点設定 -->
     <div class="settings-container">
-      <h2>順位点設定</h2>
+      <h3>🐾 順位点設定</h3>
       <p>各順位の順位点を入力してください（例：1位:+50, 2位:+10, 3位:-10, 4位:-30）</p>
       <table>
         <tr>
@@ -192,46 +304,53 @@
 
   <!-- ボタン -->
   <div class="button-container">
-    <button onclick="doCalculate()">計算する</button>
+    <button onclick="doCalculate()" class="animate-emoji">計算する</button>
     <button onclick="doReset()">リセット</button>
   </div>
 
   <!-- 結果表示 -->
-  <h2>結果表示</h2>
-  <p>
-    各セルをの点数クリックすると、その点数で和了った場合の詳細が右側に表示されます。<br>
-
+  <h2>🐰 結果表示 🐰      </h2><br>
+    各セルの点数をクリックすると、その点数で和了った場合の【詳細】が右側に表示されます。<br>
   </p>
-<p class="condition-note">※「条件あり」と表示されている場合、表示された点数より高い点数では条件を満たせない範囲があります。<br>
-※「条件あり」部分をクリックすると、OK範囲とNG範囲がそれぞれ表示されますのでご確認ください。</p>
+  <p class="condition-note">
+    ※「条件あり」と表示された場合、表示された点数より高い点数では条件を満たせない範囲があります。<br>
+    ※「条件あり」をクリックすると、OK範囲とNG範囲がそれぞれ表示されますのでご確認ください。
+  </p>
+
+  <!-- win条件用：左側に【優勝するための最小和了点数】と右側に【詳細】 -->
   <div class="result-container">
-    <div id="resultArea"></div>
-    <div id="detailArea"></div>
+    <div class="side-by-side">
+      <div id="resultArea"></div>
+      <div id="detailArea"></div>
+    </div>
+    <!-- 2位以内条件用：左側に【2位以内に入るための最小和了点数】と右側に【範囲詳細】 -->
+    <div class="side-by-side">
+      <div id="top2Area"></div>
+      <div id="rangeDetail"></div>
+    </div>
   </div>
-  <div id="rangeDetail"></div> <!-- OK/NG範囲表示用 -->
 
   <!-- フッター -->
-<footer>
-  <p>不具合のご報告・お問い合わせ: 
-    <a href="mailto:hirokuni.akiyama.npm@gmail.com" aria-label="hirokuni.akiyama.npm@gmail.com へメールを送る" title="hirokuni.akiyama.npm@gmail.com">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
-        <rect x="2" y="4" width="20" height="16" rx="2" />
-        <path d="M22 7l-10 7L2 7" />
-      </svg>
-      
-    </a>
-    または
-    <a href="https://x.com/HirokuniAkiyama" target="_blank" rel="noopener noreferrer" aria-label="" title="X (旧Twitter) でお問い合わせ">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="vertical-align: middle;">
-        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-      </svg>
-      
-    </a>
-  </p>
-  <p>©2025 hirokuni.akiyama</p>
-</footer>
+  <footer>
+    <p>不具合のご報告・お問い合わせ: 
+      <a href="mailto:hirokuni.akiyama.npm@gmail.com" aria-label="メール送信" title="hirokuni.akiyama.npm@gmail.com">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+          <rect x="2" y="4" width="20" height="16" rx="2" />
+          <path d="M22 7l-10 7L2 7" />
+        </svg>
+      </a>
+      または
+      <a href="https://x.com/HirokuniAkiyama" target="_blank" rel="noopener noreferrer" aria-label="X (旧Twitter)" title="X (旧Twitter) でお問い合わせ">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="vertical-align: middle;">
+          <path d="M18.244 2.25h4.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+      </a>
+    </p>
+    <p>©2025 hirokuni.akiyama</p>
+  </footer>
 
   <script>
+    // 各プレイヤー名・順位点の取得
     function getPlayerNames() {
       return {
         A: document.getElementById("nameA").value || "A",
@@ -250,24 +369,15 @@
       ];
     }
 
-    const PARENT_RON_POINTS = [
-      1500, 2000, 2400, 2900, 3400, 3900, 4400, 4800, 5300, 5800, 6800, 7700, 8700,
-      9600, 10600, 11600, 12000, 18000, 24000, 36000, 48000, 96000, 144000
-    ];
-    const PARENT_TSUMO_POINTS = [
-      500, 700, 800, 1000, 1200, 1300, 1500, 1600, 1800, 2000, 2300, 2600, 2900,
-      3200, 3600, 3900, 4000, 6000, 8000, 12000, 16000, 32000, 48000
-    ];
-    const CHILD_RON_POINTS = [
-      1000, 1300, 1600, 2000, 2300, 2600, 2900, 3200, 3600, 3900, 4500, 5200, 5800,
-      6400, 7100, 7700, 8000, 12000, 16000, 24000, 32000, 64000, 96000
-    ];
+    // 和了点の定数（親・子のロン／ツモ点数）
+    const PARENT_RON_POINTS = [1500, 2000, 2400, 2900, 3400, 3900, 4400, 4800, 5300, 5800, 6800, 7700, 8700, 9600, 10600, 11600, 12000, 18000, 24000, 36000, 48000, 96000, 144000];
+    const PARENT_TSUMO_POINTS = [500, 700, 800, 1000, 1200, 1300, 1500, 1600, 1800, 2000, 2300, 2600, 2900, 3200, 3600, 3900, 4000, 6000, 8000, 12000, 16000, 32000, 48000];
+    const CHILD_RON_POINTS  = [1000, 1300, 1600, 2000, 2300, 2600, 2900, 3200, 3600, 3900, 4500, 5200, 5800, 6400, 7100, 7700, 8000, 12000, 16000, 24000, 32000, 64000, 96000];
     const CHILD_TSUMO_POINTS = [
       [300, 500], [400, 700], [400, 800], [500, 1000], [600, 1200], [700, 1300],
       [800, 1500], [800, 1600], [900, 1800], [1000, 2000], [1200, 2300], [1300, 2600],
       [1500, 2900], [1600, 3200], [1800, 3600], [2000, 3900], [2000, 4000],
-      [3000, 6000], [4000, 8000], [6000, 12000], [8000, 16000], [16000, 32000],
-      [24000, 48000]
+      [3000, 6000], [4000, 8000], [6000, 12000], [8000, 16000], [16000, 32000], [24000, 48000]
     ];
 
     function calcFinalTotals(modHoldings, totals, rankPoints) {
@@ -277,7 +387,7 @@
           key: p, 
           name: playerNames[p], 
           hold: modHoldings[p], 
-          totalBefore: totals[p] 
+          totalBefore: totals[p]
         };
       });
       players.sort((a, b) => b.hold - a.hold);
@@ -319,7 +429,6 @@
           pointsList = [[0, 0], ...CHILD_TSUMO_POINTS];
         }
       }
-
       let minPoint = null;
       for (let point of pointsList) {
         let X, Y;
@@ -360,13 +469,11 @@
             newHolds[winner] += riichiSticks * 1000;
           }
         }
-
         let players = calcFinalTotals(newHolds, totals, getRankPoints());
         let winFinal = players.find(p => p.key === winner).final;
         let conditionMet = isWin 
           ? players.every(p => p.key === winner || p.final < winFinal)
           : players.filter(p => p.key !== winner && p.final < winFinal).length >= 2;
-
         if (conditionMet) {
           minPoint = method === "tsumo" && !parentFlags[winner] 
             ? (X === 0 && Y === 0 ? "オールOK" : `${X} / ${Y}`) 
@@ -389,11 +496,9 @@
           pointsList = [[0, 0], ...CHILD_TSUMO_POINTS];
         }
       }
-
       let ranges = { ok: [], ng: [] };
       let prevConditionMet = false;
       let currentRange = null;
-
       for (let i = 0; i < pointsList.length; i++) {
         let point = pointsList[i];
         let X, Y;
@@ -434,13 +539,11 @@
             newHolds[winner] += riichiSticks * 1000;
           }
         }
-
         let players = calcFinalTotals(newHolds, totals, getRankPoints());
         let winFinal = players.find(p => p.key === winner).final;
         let conditionMet = isWin 
           ? players.every(p => p.key === winner || p.final < winFinal)
           : players.filter(p => p.key !== winner && p.final < winFinal).length >= 2;
-
         let pointStr = method === "tsumo" && !parentFlags[winner] ? `${X} / ${Y}` : `${X}`;
         if (conditionMet !== prevConditionMet) {
           if (currentRange) {
@@ -455,7 +558,7 @@
       }
       if (currentRange) {
         currentRange.end = method === "tsumo" && !parentFlags[winner] 
-          ? `${pointsList[pointsList.length-1][0]} / ${pointsList[pointsList.length-1][1]}` 
+          ? `${pointsList[pointsList.length-1][0]} / ${pointsList[pointsList.length-1][1]}`
           : `${pointsList[pointsList.length-1]}`;
         ranges[prevConditionMet ? "ok" : "ng"].push(currentRange);
       }
@@ -542,9 +645,8 @@
       let honba = parseInt(document.getElementById("honba").value);
       let riichiSticks = parseInt(document.getElementById("riichiSticks").value);
       let rankPoints = getRankPoints();
-
       let players = simulateScenario(winnerKey, method, targetKey, scoreVal, totals, holds, parentFlags, honba, riichiSticks, rankPoints);
-      let detailHtml = "<h3>【詳細】" + winner + "が" + (method === "ron" ? ("ロン from " + target) : "ツモ") + "で" + scoreVal + "点和了った場合</h3>";
+      let detailHtml = "<h4>🐾 【詳細】" + winner + "が" + (method === "ron" ? ("ロン from " + target) : "ツモ") + "で" + scoreVal + "点和了った場合</h4>";
       detailHtml += "<table><tr><th>プレイヤー</th><th>新持ち点</th><th>持ち点差</th><th>順位点</th><th>半荘得失点</th><th>前回トータルpt</th><th>合計</th></tr>";
       players.sort((a, b) => a.key.localeCompare(b.key));
       players.forEach(p => {
@@ -585,11 +687,10 @@
       };
       let honba = parseInt(document.getElementById("honba").value);
       let riichiSticks = parseInt(document.getElementById("riichiSticks").value);
-
       let ranges = getWinningRanges(totals, holds, winnerKey, method, targetKey, parentFlags, honba, riichiSticks, isWin);
       let rangeText = formatRanges(ranges);
       let targetText = targetKey ? `ロン from ${playerNames[targetKey]}` : "ツモ";
-      let detailHtml = `<h3>【範囲詳細】${playerNames[winnerKey]}が${targetText}で${isWin ? "優勝" : "2位以内"}に入る場合</h3>`;
+      let detailHtml = `<h4>🐾 【範囲詳細】${playerNames[winnerKey]}が${targetText}で${isWin ? "優勝" : "2位以内"}に入る場合</h4>`;
       detailHtml += rangeText;
       document.getElementById("rangeDetail").innerHTML = detailHtml;
     }
@@ -617,7 +718,6 @@
       let honba = parseInt(document.getElementById("honba").value);
       let riichiSticks = parseInt(document.getElementById("riichiSticks").value);
       let rankPoints = getRankPoints();
-
       let errorMessages = "";
       let totalSum = Object.values(totals).reduce((a, b) => a + b, 0);
       if (Math.abs(totalSum) > 0.0001) {
@@ -633,9 +733,7 @@
         document.getElementById("resultArea").innerHTML = errorMessages;
         return;
       }
-
       let players = ["A", "B", "C", "D"];
-
       let winResults = {};
       players.forEach(w => {
         winResults[w] = { ron: {}, tsumo: null };
@@ -646,7 +744,7 @@
             let hasCondition = minPoint !== "優勝不可" && minPoint !== "オールOK" && ranges.ng.length > 0;
             winResults[w].ron[l] = minPoint === "優勝不可" || minPoint === "オールOK"
               ? minPoint
-              : `<a href="#" onclick="showDetail('${w}', 'ron', '${l}', '${minPoint}')">${minPoint}点</a>` + 
+              : `<a href="javascript:void(0)" onclick="showDetail('${w}', 'ron', '${l}', '${minPoint}')">${minPoint}点</a>` +
                 (hasCondition ? ` <span class="condition" onclick="showRangeDetail('${w}', 'ron', '${l}', true)">条件あり</span>` : "");
           }
         });
@@ -655,10 +753,9 @@
         let hasTsumoCondition = minTsumo !== "優勝不可" && minTsumo !== "オールOK" && rangesTsumo.ng.length > 0;
         winResults[w].tsumo = minTsumo === "優勝不可" || minTsumo === "オールOK"
           ? minTsumo
-          : `<a href="#" onclick="showDetail('${w}', 'tsumo', '', '${minTsumo}')">${minTsumo}</a>` + 
+          : `<a href="javascript:void(0)" onclick="showDetail('${w}', 'tsumo', '', '${minTsumo}')">${minTsumo}</a>` +
             (hasTsumoCondition ? ` <span class="condition" onclick="showRangeDetail('${w}', 'tsumo', '', true)">条件あり</span>` : "");
       });
-
       let top2Results = {};
       players.forEach(w => {
         top2Results[w] = { ron: {}, tsumo: null };
@@ -669,7 +766,7 @@
             let hasCondition = minPoint !== "2位以内不可" && minPoint !== "オールOK" && ranges.ng.length > 0;
             top2Results[w].ron[l] = minPoint === "2位以内不可" || minPoint === "オールOK"
               ? minPoint
-              : `<a href="#" onclick="showDetail('${w}', 'ron', '${l}', '${minPoint}')">${minPoint}点</a>` + 
+              : `<a href="javascript:void(0)" onclick="showDetail('${w}', 'ron', '${l}', '${minPoint}')">${minPoint}点</a>` +
                 (hasCondition ? ` <span class="condition" onclick="showRangeDetail('${w}', 'ron', '${l}', false)">条件あり</span>` : "");
           }
         });
@@ -678,11 +775,10 @@
         let hasTsumoCondition = minTsumo !== "2位以内不可" && minTsumo !== "オールOK" && rangesTsumo.ng.length > 0;
         top2Results[w].tsumo = minTsumo === "2位以内不可" || minTsumo === "オールOK"
           ? minTsumo
-          : `<a href="#" onclick="showDetail('${w}', 'tsumo', '', '${minTsumo}')">${minTsumo}</a>` + 
+          : `<a href="javascript:void(0)" onclick="showDetail('${w}', 'tsumo', '', '${minTsumo}')">${minTsumo}</a>` +
             (hasTsumoCondition ? ` <span class="condition" onclick="showRangeDetail('${w}', 'tsumo', '', false)">条件あり</span>` : "");
       });
-
-      let winHtml = "<h3>優勝するために必要な最小和了点数</h3><table class='resultTable'><tr><th>和了者</th>";
+      let winHtml = "<h4>🐾 優勝するために必要な最小和了点数</h4><table class='resultTable'><tr><th>和了者</th>";
       players.forEach(p => winHtml += `<th>ロン from ${playerNames[p]}</th>`);
       winHtml += "<th>ツモ</th></tr>";
       players.forEach(w => {
@@ -693,8 +789,7 @@
         winHtml += `<td>${winResults[w].tsumo}</td></tr>`;
       });
       winHtml += "</table>";
-
-      let top2Html = "<h3>2位以内に入るために必要な最小和了点数</h3><table class='resultTable'><tr><th>和了者</th>";
+      let top2Html = "<h4>🐾 2位以内に入るために必要な最小和了点数</h4><table class='resultTable'><tr><th>和了者</th>";
       players.forEach(p => top2Html += `<th>ロン from ${playerNames[p]}</th>`);
       top2Html += "<th>ツモ</th></tr>";
       players.forEach(w => {
@@ -705,8 +800,10 @@
         top2Html += `<td>${top2Results[w].tsumo}</td></tr>`;
       });
       top2Html += "</table>";
-
-      document.getElementById("resultArea").innerHTML = errorMessages + winHtml + top2Html;
+      
+      // 【優勝するための】テーブルはresultAreaへ、【2位以内】テーブルはtop2Areaへ出力
+      document.getElementById("resultArea").innerHTML = errorMessages + winHtml;
+      document.getElementById("top2Area").innerHTML = top2Html;
     }
 
     function doReset() {
@@ -725,7 +822,7 @@
       document.getElementById("parentA").checked = false;
       document.getElementById("parentB").checked = false;
       document.getElementById("parentC").checked = false;
-      document.getElementById("parentD").checked = false;
+      document.getElementById("parentD").checked = true;
       document.getElementById("rank1").value = "50";
       document.getElementById("rank2").value = "10";
       document.getElementById("rank3").value = "-10";
@@ -733,69 +830,60 @@
       document.getElementById("honba").value = "0";
       document.getElementById("riichiSticks").value = "0";
       document.getElementById("resultArea").innerHTML = "";
+      document.getElementById("top2Area").innerHTML = "";
       document.getElementById("detailArea").innerHTML = "";
       document.getElementById("rangeDetail").innerHTML = "";
     }
 
-// 初期持ち点（通常30000点）
-const INITIAL_HOLD = 30000;
+    // 初期持ち点（通常30000点）
+    const INITIAL_HOLD = 30000;
 
-// 最終ptを計算して表示する関数
-function updateFinalPts() {
- const players = ["A", "B", "C", "D"];
- const totals = players.map(p => parseFloat(document.getElementById(`total${p}`).value) || 0);
- const holds = players.map(p => parseInt(document.getElementById(`hold${p}`).value) || INITIAL_HOLD);
- const rankPoints = [
- parseFloat(document.getElementById("rank1").value) || 50,
- parseFloat(document.getElementById("rank2").value) || 10,
- parseFloat(document.getElementById("rank3").value) || -10,
- parseFloat(document.getElementById("rank4").value) || -30
- ];
+    // 最終pt表示更新用の関数
+    function updateFinalPts() {
+      const players = ["A", "B", "C", "D"];
+      const totals = players.map(p => parseFloat(document.getElementById(`total${p}`).value) || 0);
+      const holds = players.map(p => parseInt(document.getElementById(`hold${p}`).value) || INITIAL_HOLD);
+      const rankPoints = [
+        parseFloat(document.getElementById("rank1").value) || 50,
+        parseFloat(document.getElementById("rank2").value) || 10,
+        parseFloat(document.getElementById("rank3").value) || -10,
+        parseFloat(document.getElementById("rank4").value) || -30
+      ];
+      const holdRanks = players.map((p, i) => ({ key: p, hold: holds[i] }));
+      holdRanks.sort((a, b) => b.hold - a.hold);
+      let rank = 1;
+      for (let i = 0; i < holdRanks.length; ) {
+        let group = [holdRanks[i]];
+        let j = i + 1;
+        while (j < holdRanks.length && holdRanks[j].hold === holdRanks[i].hold) {
+          group.push(holdRanks[j]);
+          j++;
+        }
+        const groupSize = group.length;
+        const sumRankPoints = rankPoints.slice(rank - 1, rank - 1 + groupSize).reduce((a, b) => a + b, 0);
+        const avgRankPoint = sumRankPoints / groupSize;
+        group.forEach(player => { player.rankPoint = avgRankPoint; });
+        rank += groupSize;
+        i = j;
+      }
+      const finalPts = players.map((p, i) => {
+        const holdDiff = (holds[i] - INITIAL_HOLD) / 1000;
+        const rankPoint = holdRanks.find(r => r.key === p).rankPoint;
+        return totals[i] + holdDiff + rankPoint;
+      });
+      players.forEach((p, i) => {
+        const name = document.getElementById(`name${p}`).value || p;
+        document.getElementById(`finalName${p}`).textContent = name;
+        document.getElementById(`finalPt${p}`).textContent = finalPts[i].toFixed(1);
+      });
+    }
 
- // 持ち点に基づく順位を決定
- const holdRanks = players.map((p, i) => ({ key: p, hold: holds[i] }));
- holdRanks.sort((a, b) => b.hold - a.hold);
+    // イベントリスナー設定
+    document.querySelectorAll('input[id^=name], input[id^=total], input[id^=hold], input[id^=rank]').forEach(input => {
+      input.addEventListener('input', updateFinalPts);
+    });
 
- let rank = 1;
- for (let i = 0; i < holdRanks.length; ) {
- let group = [holdRanks[i]];
- let j = i + 1;
- while (j < holdRanks.length && holdRanks[j].hold === holdRanks[i].hold) {
- group.push(holdRanks[j]);
- j++;
- }
- const groupSize = group.length;
- const sumRankPoints = rankPoints.slice(rank - 1, rank - 1 + groupSize).reduce((a, b) => a + b, 0);
- const avgRankPoint = sumRankPoints / groupSize;
- group.forEach(player => {
- player.rankPoint = avgRankPoint;
- });
- rank += groupSize;
- i = j;
- }
-
- // 各プレイヤーの最終ptを計算
- const finalPts = players.map((p, i) => {
- const holdDiff = (holds[i] - INITIAL_HOLD) / 1000;
- const rankPoint = holdRanks.find(r => r.key === p).rankPoint;
- return totals[i] + holdDiff + rankPoint;
- });
-
- // 表示を更新
- players.forEach((p, i) => {
- const name = document.getElementById(`name${p}`).value || p;
- document.getElementById(`finalName${p}`).textContent = name;
- document.getElementById(`finalPt${p}`).textContent = finalPts[i].toFixed(1);
- });
-}
-
-// イベントリスナーの設定
-document.querySelectorAll('input[id^=name], input[id^=total], input[id^=hold], input[id^=rank]').forEach(input => {
- input.addEventListener('input', updateFinalPts);
-});
-
-// ページ読み込み時に初期表示を更新
-updateFinalPts();
+    updateFinalPts();
   </script>
 </body>
 </html>
