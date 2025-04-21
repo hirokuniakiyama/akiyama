@@ -690,121 +690,139 @@ h2::before {
       let ranges = getWinningRanges(totals, holds, winnerKey, method, targetKey, parentFlags, honba, riichiSticks, isWin);
       let rangeText = formatRanges(ranges);
       let targetText = targetKey ? `ロン from ${playerNames[targetKey]}` : "ツモ";
-      let detailHtml = `<h4>🐾 【範囲詳細】${playerNames[winnerKey]}が${targetText}で${isWin ? "優勝" : "2位以内"}に入る場合</h4>`;
+      let detailHtml = `<h4>🐾 【範囲詳細】${playerNames[winnerKey]}が${targetText}で${isWin ? "優勝" : "2位以内"}になる場合</h4>`;
       detailHtml += rangeText;
       document.getElementById("rangeDetail").innerHTML = detailHtml;
     }
 
-    function doCalculate() {
-      let playerNames = getPlayerNames();
-      let totals = {
-        A: parseFloat(document.getElementById("totalA").value),
-        B: parseFloat(document.getElementById("totalB").value),
-        C: parseFloat(document.getElementById("totalC").value),
-        D: parseFloat(document.getElementById("totalD").value)
-      };
-      let holds = {
-        A: parseInt(document.getElementById("holdA").value),
-        B: parseInt(document.getElementById("holdB").value),
-        C: parseInt(document.getElementById("holdC").value),
-        D: parseInt(document.getElementById("holdD").value)
-      };
-      let parentFlags = {
-        A: document.getElementById("parentA").checked,
-        B: document.getElementById("parentB").checked,
-        C: document.getElementById("parentC").checked,
-        D: document.getElementById("parentD").checked
-      };
-      let honba = parseInt(document.getElementById("honba").value);
-      let riichiSticks = parseInt(document.getElementById("riichiSticks").value);
-      let rankPoints = getRankPoints();
-      let errorMessages = "";
-      let totalSum = Object.values(totals).reduce((a, b) => a + b, 0);
-      if (Math.abs(totalSum) > 0.0001) {
-        errorMessages += `<p class="warning">警告：トータルポイントの合計が0ではありません（合計: ${totalSum.toFixed(2)}）。</p>`;
+function doCalculate() {
+  let playerNames = getPlayerNames();
+  let totals = {
+    A: parseFloat(document.getElementById("totalA").value),
+    B: parseFloat(document.getElementById("totalB").value),
+    C: parseFloat(document.getElementById("totalC").value),
+    D: parseFloat(document.getElementById("totalD").value)
+  };
+  let holds = {
+    A: parseInt(document.getElementById("holdA").value),
+    B: parseInt(document.getElementById("holdB").value),
+    C: parseInt(document.getElementById("holdC").value),
+    D: parseInt(document.getElementById("holdD").value)
+  };
+  let parentFlags = {
+    A: document.getElementById("parentA").checked,
+    B: document.getElementById("parentB").checked,
+    C: document.getElementById("parentC").checked,
+    D: document.getElementById("parentD").checked
+  };
+  let honba = parseInt(document.getElementById("honba").value);
+  let riichiSticks = parseInt(document.getElementById("riichiSticks").value);
+  let rankPoints = getRankPoints();
+  let errorMessages = "";
+  let totalSum = Object.values(totals).reduce((a, b) => a + b, 0);
+  if (Math.abs(totalSum) > 0.0001) {
+    errorMessages += `<p class="warning">警告：トータルポイントの合計が0ではありません（合計: ${totalSum.toFixed(2)}）。</p>`;
+  }
+  let holdSum = Object.values(holds).reduce((a, b) => a + b, 0);
+  if (holdSum + riichiSticks * 1000 !== 100000) {
+    errorMessages += `<p class="warning">警告：持ち点の合計が100,000点ではありません（合計: ${holdSum + riichiSticks * 1000}）。</p>`;
+  }
+  let pCount = Object.values(parentFlags).filter(v => v).length;
+  if (pCount !== 1) {
+    errorMessages += `<p class="error">エラー：親は必ず1人だけチェックしてください（現在 ${pCount} 人）。</p>`;
+    document.getElementById("resultArea").innerHTML = errorMessages;
+    return;
+  }
+  let players = ["A", "B", "C", "D"];
+  let winResults = {};
+  players.forEach(w => {
+    winResults[w] = { ron: {}, tsumo: null };
+    players.forEach(l => {
+      if (l !== w) {
+        let minPoint = getMinPoints(totals, holds, w, "ron", l, parentFlags, honba, riichiSticks, true);
+        let ranges = getWinningRanges(totals, holds, w, "ron", l, parentFlags, honba, riichiSticks, true);
+        let hasCondition = ranges.ng.length > 0; // NG範囲が存在するか
+        winResults[w].ron[l] = minPoint === "優勝不可"
+          ? minPoint
+          : (minPoint === "オールOK"
+            ? (hasCondition
+              ? `オールOK <span class="condition" onclick="showRangeDetail('${w}', 'ron', '${l}', true)">※条件あり</span>`
+              : minPoint)
+            : `<a href="javascript:void(0)" onclick="showDetail('${w}', 'ron', '${l}', '${minPoint}')">${minPoint}点</a>` +
+              (hasCondition ? ` <span class="condition" onclick="showRangeDetail('${w}', 'ron', '${l}', true)">条件あり</span>` : ""));
       }
-      let holdSum = Object.values(holds).reduce((a, b) => a + b, 0);
-      if (holdSum + riichiSticks * 1000 !== 100000) {
-        errorMessages += `<p class="warning">警告：持ち点の合計が100,000点ではありません（合計: ${holdSum + riichiSticks * 1000}）。</p>`;
+    });
+    let minTsumo = getMinPoints(totals, holds, w, "tsumo", "", parentFlags, honba, riichiSticks, true);
+    let rangesTsumo = getWinningRanges(totals, holds, w, "tsumo", "", parentFlags, honba, riichiSticks, true);
+    let hasTsumoCondition = rangesTsumo.ng.length > 0;
+    winResults[w].tsumo = minTsumo === "優勝不可"
+      ? minTsumo
+      : (minTsumo === "オールOK"
+        ? (hasTsumoCondition
+          ? `オールOK <span class="condition" onclick="showRangeDetail('${w}', 'tsumo', '', true)">※条件あり</span>`
+          : minTsumo)
+        : `<a href="javascript:void(0)" onclick="showDetail('${w}', 'tsumo', '', '${minTsumo}')">${minTsumo}</a>` +
+          (hasTsumoCondition ? ` <span class="condition" onclick="showRangeDetail('${w}', 'tsumo', '', true)">条件あり</span>` : ""));
+  });
+
+  let top2Results = {};
+  players.forEach(w => {
+    top2Results[w] = { ron: {}, tsumo: null };
+    players.forEach(l => {
+      if (l !== w) {
+        let minPoint = getMinPoints(totals, holds, w, "ron", l, parentFlags, honba, riichiSticks, false);
+        let ranges = getWinningRanges(totals, holds, w, "ron", l, parentFlags, honba, riichiSticks, false);
+        let hasCondition = ranges.ng.length > 0;
+        top2Results[w].ron[l] = minPoint === "2位以内不可"
+          ? minPoint
+          : (minPoint === "オールOK"
+            ? (hasCondition
+              ? `オールOK <span class="condition" onclick="showRangeDetail('${w}', 'ron', '${l}', false)">※条件あり</span>`
+              : minPoint)
+            : `<a href="javascript:void(0)" onclick="showDetail('${w}', 'ron', '${l}', '${minPoint}')">${minPoint}点</a>` +
+              (hasCondition ? ` <span class="condition" onclick="showRangeDetail('${w}', 'ron', '${l}', false)">条件あり</span>` : ""));
       }
-      let pCount = Object.values(parentFlags).filter(v => v).length;
-      if (pCount !== 1) {
-        errorMessages += `<p class="error">エラー：親は必ず1人だけチェックしてください（現在 ${pCount} 人）。</p>`;
-        document.getElementById("resultArea").innerHTML = errorMessages;
-        return;
-      }
-      let players = ["A", "B", "C", "D"];
-      let winResults = {};
-      players.forEach(w => {
-        winResults[w] = { ron: {}, tsumo: null };
-        players.forEach(l => {
-          if (l !== w) {
-            let minPoint = getMinPoints(totals, holds, w, "ron", l, parentFlags, honba, riichiSticks, true);
-            let ranges = getWinningRanges(totals, holds, w, "ron", l, parentFlags, honba, riichiSticks, true);
-            let hasCondition = minPoint !== "優勝不可" && minPoint !== "オールOK" && ranges.ng.length > 0;
-            winResults[w].ron[l] = minPoint === "優勝不可" || minPoint === "オールOK"
-              ? minPoint
-              : `<a href="javascript:void(0)" onclick="showDetail('${w}', 'ron', '${l}', '${minPoint}')">${minPoint}点</a>` +
-                (hasCondition ? ` <span class="condition" onclick="showRangeDetail('${w}', 'ron', '${l}', true)">条件あり</span>` : "");
-          }
-        });
-        let minTsumo = getMinPoints(totals, holds, w, "tsumo", "", parentFlags, honba, riichiSticks, true);
-        let rangesTsumo = getWinningRanges(totals, holds, w, "tsumo", "", parentFlags, honba, riichiSticks, true);
-        let hasTsumoCondition = minTsumo !== "優勝不可" && minTsumo !== "オールOK" && rangesTsumo.ng.length > 0;
-        winResults[w].tsumo = minTsumo === "優勝不可" || minTsumo === "オールOK"
-          ? minTsumo
-          : `<a href="javascript:void(0)" onclick="showDetail('${w}', 'tsumo', '', '${minTsumo}')">${minTsumo}</a>` +
-            (hasTsumoCondition ? ` <span class="condition" onclick="showRangeDetail('${w}', 'tsumo', '', true)">条件あり</span>` : "");
-      });
-      let top2Results = {};
-      players.forEach(w => {
-        top2Results[w] = { ron: {}, tsumo: null };
-        players.forEach(l => {
-          if (l !== w) {
-            let minPoint = getMinPoints(totals, holds, w, "ron", l, parentFlags, honba, riichiSticks, false);
-            let ranges = getWinningRanges(totals, holds, w, "ron", l, parentFlags, honba, riichiSticks, false);
-            let hasCondition = minPoint !== "2位以内不可" && minPoint !== "オールOK" && ranges.ng.length > 0;
-            top2Results[w].ron[l] = minPoint === "2位以内不可" || minPoint === "オールOK"
-              ? minPoint
-              : `<a href="javascript:void(0)" onclick="showDetail('${w}', 'ron', '${l}', '${minPoint}')">${minPoint}点</a>` +
-                (hasCondition ? ` <span class="condition" onclick="showRangeDetail('${w}', 'ron', '${l}', false)">条件あり</span>` : "");
-          }
-        });
-        let minTsumo = getMinPoints(totals, holds, w, "tsumo", "", parentFlags, honba, riichiSticks, false);
-        let rangesTsumo = getWinningRanges(totals, holds, w, "tsumo", "", parentFlags, honba, riichiSticks, false);
-        let hasTsumoCondition = minTsumo !== "2位以内不可" && minTsumo !== "オールOK" && rangesTsumo.ng.length > 0;
-        top2Results[w].tsumo = minTsumo === "2位以内不可" || minTsumo === "オールOK"
-          ? minTsumo
-          : `<a href="javascript:void(0)" onclick="showDetail('${w}', 'tsumo', '', '${minTsumo}')">${minTsumo}</a>` +
-            (hasTsumoCondition ? ` <span class="condition" onclick="showRangeDetail('${w}', 'tsumo', '', false)">条件あり</span>` : "");
-      });
-      let winHtml = "<h4>🐾 優勝するために必要な最小和了点数</h4><table class='resultTable'><tr><th>和了者</th>";
-      players.forEach(p => winHtml += `<th>ロン from ${playerNames[p]}</th>`);
-      winHtml += "<th>ツモ</th></tr>";
-      players.forEach(w => {
-        winHtml += `<tr><th>${playerNames[w]}</th>`;
-        players.forEach(p => {
-          winHtml += p === w ? "<td>―</td>" : `<td>${winResults[w].ron[p]}</td>`;
-        });
-        winHtml += `<td>${winResults[w].tsumo}</td></tr>`;
-      });
-      winHtml += "</table>";
-      let top2Html = "<h4>🐾 2位以内に入るために必要な最小和了点数</h4><table class='resultTable'><tr><th>和了者</th>";
-      players.forEach(p => top2Html += `<th>ロン from ${playerNames[p]}</th>`);
-      top2Html += "<th>ツモ</th></tr>";
-      players.forEach(w => {
-        top2Html += `<tr><th>${playerNames[w]}</th>`;
-        players.forEach(p => {
-          top2Html += p === w ? "<td>―</td>" : `<td>${top2Results[w].ron[p]}</td>`;
-        });
-        top2Html += `<td>${top2Results[w].tsumo}</td></tr>`;
-      });
-      top2Html += "</table>";
-      
-      // 【優勝するための】テーブルはresultAreaへ、【2位以内】テーブルはtop2Areaへ出力
-      document.getElementById("resultArea").innerHTML = errorMessages + winHtml;
-      document.getElementById("top2Area").innerHTML = top2Html;
-    }
+    });
+    let minTsumo = getMinPoints(totals, holds, w, "tsumo", "", parentFlags, honba, riichiSticks, false);
+    let rangesTsumo = getWinningRanges(totals, holds, w, "tsumo", "", parentFlags, honba, riichiSticks, false);
+    let hasTsumoCondition = rangesTsumo.ng.length > 0;
+    top2Results[w].tsumo = minTsumo === "2位以内不可"
+      ? minTsumo
+      : (minTsumo === "オールOK"
+        ? (hasTsumoCondition
+          ? `オールOK <span class="condition" onclick="showRangeDetail('${w}', 'tsumo', '', false)">※条件あり</span>`
+          : minTsumo)
+        : `<a href="javascript:void(0)" onclick="showDetail('${w}', 'tsumo', '', '${minTsumo}')">${minTsumo}</a>` +
+          (hasTsumoCondition ? ` <span class="condition" onclick="showRangeDetail('${w}', 'tsumo', '', false)">条件あり</span>` : ""));
+  });
+
+  let winHtml = "<h4>🐾 優勝するために必要な最小和了点数</h4><table class='resultTable'><tr><th>和了者</th>";
+  players.forEach(p => winHtml += `<th>ロン from ${playerNames[p]}</th>`);
+  winHtml += "<th>ツモ</th></tr>";
+  players.forEach(w => {
+    winHtml += `<tr><th>${playerNames[w]}</th>`;
+    players.forEach(p => {
+      winHtml += p === w ? "<td>―</td>" : `<td>${winResults[w].ron[p]}</td>`;
+    });
+    winHtml += `<td>${winResults[w].tsumo}</td></tr>`;
+  });
+  winHtml += "</table>";
+
+  let top2Html = "<h4>🐾 2位以内に入るために必要な最小和了点数</h4><table class='resultTable'><tr><th>和了者</th>";
+  players.forEach(p => top2Html += `<th>ロン from ${playerNames[p]}</th>`);
+  top2Html += "<th>ツモ</th></tr>";
+  players.forEach(w => {
+    top2Html += `<tr><th>${playerNames[w]}</th>`;
+    players.forEach(p => {
+      top2Html += p === w ? "<td>―</td>" : `<td>${top2Results[w].ron[p]}</td>`;
+    });
+    top2Html += `<td>${top2Results[w].tsumo}</td></tr>`;
+  });
+  top2Html += "</table>";
+
+  document.getElementById("resultArea").innerHTML = errorMessages + winHtml;
+  document.getElementById("top2Area").innerHTML = top2Html;
+}
 
     function doReset() {
       document.getElementById("nameA").value = "A";
