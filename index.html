@@ -853,14 +853,17 @@ function doCalculate() {
       document.getElementById("rangeDetail").innerHTML = "";
     }
 
-    // 初期持ち点（通常30000点）
+ // 初期持ち点（通常30000点）
     const INITIAL_HOLD = 30000;
 
     // 最終pt表示更新用の関数
     function updateFinalPts() {
       const players = ["A", "B", "C", "D"];
       const totals = players.map(p => parseFloat(document.getElementById(`total${p}`).value) || 0);
-      const holds = players.map(p => parseInt(document.getElementById(`hold${p}`).value) || INITIAL_HOLD);
+      const holds = players.map(p => {
+        const holdValue = document.getElementById(`hold${p}`).value;
+        return holdValue === "" ? INITIAL_HOLD : parseInt(holdValue);
+      });
       const rankPoints = [
         parseFloat(document.getElementById("rank1").value) || 50,
         parseFloat(document.getElementById("rank2").value) || 10,
